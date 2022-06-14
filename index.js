@@ -1,6 +1,6 @@
 const express = require('express'); //Import the express dependency
 const app = express();              //Instantiate an express app, the main work horse of this server
-const port = 5000;                  //Save the port number where your server will be listening
+const PORT = process.env.PORT || 5000     //Save the port number where your server will be listening
 
 // app.use(express.static(__dirname + '/static'));
 app.use(express.static('static'));
