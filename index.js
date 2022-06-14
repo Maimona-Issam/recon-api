@@ -11,6 +11,6 @@ app.get('/', (req, res) => {        //get requests to the root ("/") will route 
                                                         //the .sendFile method needs the absolute path to the file, see: https://expressjs.com/en/4x/api.html#res.sendFile 
 });
 
-app.listen(port, () => {            //server starts listening for any attempts from a client to connect at port: {port}
-    console.log(`Now listening on port ${port}`); 
+app.listen(PORT, () => {            //server starts listening for any attempts from a client to connect at port: {port}
+    console.log(`Now listening on port ${PORT}`); 
 });
