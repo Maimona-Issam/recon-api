@@ -38,12 +38,10 @@ var reports = [];
 var res = null;
 
 function unblockPage() {
-    console.log('hi2');
     $('.loader').hide();
     $("#getRes").prop("disabled", false);
   }
   function blockPage() {
-    console.log('hi');
     $('.loader').show();
     $("#getRes").prop("disabled", true);
   }
