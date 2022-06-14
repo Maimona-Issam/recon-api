@@ -115,8 +115,8 @@ function fetch_statement() {
         xhr.setRequestHeader("Authorization", $("input[name=secret]").val())
       },
       type: 'GET',
-      crossOrigin: null,
-      crossDomain: true,
+    //   crossOrigin: null,
+    //   crossDomain: true,
       contentType: 'text/csv',
       success: function (response) {
         console.log(response);
