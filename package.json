@@ -1,0 +1,22 @@
+{
+  "name": "recon_api",
+  "version": "1.0.0",
+  "description": "Checkout.com Recon API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maimona-Issam/recon-api.git"
+  },
+  "author": "Maimona Issam",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Maimona-Issam/recon-api/issues"
+  },
+  "homepage": "https://github.com/Maimona-Issam/recon-api#readme",
+  "dependencies": {
+    "express": "^4.18.1"
+  }
+}
