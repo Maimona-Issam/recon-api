@@ -1,0 +1,201 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/css/datepicker.min.css">
+    <link rel="stylesheet" href="css/recon.css">
+</head>
+
+<body>
+    <div class="jumbotron text-center">
+        <img style="margin-bottom:20px"
+            src="https://images.sifted.eu/wp-content/uploads/2021/07/22190435/01-LOGO_Checkout_DarkBlue-1.png"
+            width="20%" height="5%">
+
+        <h6>Checkout.com's Recon API</h6>
+    </div>
+
+    <div class="container">
+        <form id="secretForm" method="post" action="/">
+            <div id="alert-area"></div>
+            <div class="form-group row">
+                <label for="secret" class="col-4 col-form-label">Secret Key</label>
+                <div class="loader"></div>
+                <div class="col-8">
+                    <input id="secret" name="secret" type="text" class="form-control" required="required"
+                        onchange="checkKey()" value="<% if (locals.secret) { %><%= secret %><% } %>">
+                </div>
+            </div>
+            <input id="today" name="today" type="hidden" class="form-control" required="required">
+
+        </form>
+        <form id="dataForm" method="post" action="/">
+            <input id="secretData" name="secret" type="hidden" class="form-control" required="required"
+                value="<% if (locals.secret) { %><%= secret %><% } %>">
+            <input id="statements" name="statements" type="hidden" class="form-control" required="required"
+            value="<% if (locals.result) { %><%= result.data_.statements %><% } %>">
+
+            <div class="form-group row">
+                <label for="mode" class="col-4 col-form-label">Select mode</label>
+                <div class="col-8">
+                    <select id="mode" name="mode" required="required" class="custom-select" onchange="setMode()">
+                        <option value="payments">Payments</option>
+                        <option value="statements">Statements</option>
+                    </select>
+                </div>
+            </div>
+            <div id="rangeDate">
+                <div class="form-group row">
+                    <label for="from" class="col-4 col-form-label">From</label>
+                    <div class="col-8">
+                        <input id="from" name="start" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.start %><% } %>">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="to" class="col-4 col-form-label">to</label>
+                    <div class="col-8">
+                        <input id="to" name="end" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.end %><% } %>">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="limit" class="col-4 col-form-label">Limit</label>
+                <div class="col-8">
+                    <input id="limit" name="limit" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.limit %><% } %>">
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="breakdown" class="col-4 col-form-label">Include payout breakdown</label>
+                <div class="col-8">
+                    <input id="breakdown" name="breakdown" type="checkbox" class="form-control" required="required" <% if (locals.result) { %><%= typeof result.data_.breakdown != 'undefined' ? "checked": '' %><% } %>>
+                </div>
+            </div>
+            <div id="paymentOptions">
+                <div class="form-group row">
+                    <label for="reference" class="col-4 col-form-label">Reference</label>
+                    <div class="col-8">
+                        <input id="reference" name="reference" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.reference %><% } %>">
+                    </div>
+                </div>
+            </div>
+
+            <div id="statementsOptions">
+                <div class="form-group row">
+                    <label for="statementId" class="col-4 col-form-label">Statement ID</label>
+                    <div class="col-8">
+                        <select id="statementId" name="statementId" class="form-control" required="required" 
+                            onchange="setStatementOptions()" disabled>
+                            <option value="">Select..</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="payoutId" class="col-4 col-form-label">Payout ID</label>
+                    <div class="col-8">
+                        <select id="payoutId" name="payoutId" class="form-control" required="required"
+                            onchange="setPayoutId()" disabled>
+                            <option value="">Select..</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="currency" class="col-4 col-form-label">Payout Currency</label>
+                    <div class="col-8">
+                        <select id="currency" name="currency" class="form-control" required="required"
+                            onchange="setCurrency()" disabled>
+                            <option value="">Select..</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="offset-4 col-8">
+                    <button name="getRes" id="getRes" type="button" class="btn btn-success">Submit</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker-full.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/helper.js"></script>
+    <script>
+        <% if (locals.secret) { %>key='<%= secret %>';<% } %>
+
+        <% if (locals.statements) { %>
+            var status= '<%= statements.status %>';
+            if(status =='f'){
+                showMessage('danger', '<%= statements.error %>');
+            }else{
+                const stat_csv = "<%= statements.csv %>".replaceAll("CKONEWLINECKO", '\r\n');
+                if (stat_csv) {
+                    statements = csvToJson(stat_csv);
+                    $('#statements').val(JSON.stringify(statements));
+                    setStatements();
+                    showMessage('success', `Statements fetched successfully`);
+                    $('#mode').val('statements');
+                    mode=$('#mode').val();
+                    changeMode();
+                }
+            }
+        <% } %>
+
+        <% if (locals.result) { %>
+
+            try{
+                if($('#statements').val()!=''){
+                    statements = JSON.parse($('#statements').val());
+                    setStatements();
+                }
+                mode = '<%= result.data_.mode %>';
+                $('#mode').val(mode);
+                console.log(mode);
+                changeMode();
+
+                $('#statementId').val('<%= result.data_.statementId %>');
+                if($('#statementId').val()!=''){
+                    setStatementOptions();
+                    $('#currency').val('<%= result.data_.currency %>');
+                    $('#payoutId').val('<%= result.data_.payoutId %>');
+                    if($('#currency').val()!=''){
+                        setCurrency();
+                    }else if($('#payoutId').val()!=''){
+                        setPayoutId();
+                    }
+                }
+
+                var status= '<%= result.status %>';
+                if(status =='f'){
+                    showMessage('danger', '<%= result.error %>');
+                }else{
+                    var csv_report="<%= result.csv %>".replaceAll("CKONEWLINECKO", '\r\n');
+
+                    var limit = "<%= result.data_.limit %>";
+                    if(typeof limit !='undefined')
+                        limit = $('#limit').val() != '' ? parseInt($('#limit').val()) : 0;
+                    else limit =0;
+
+                    var reference="<%= result.data_.reference %>";
+                    if(typeof reference =='undefined')
+                        reference='';
+                    
+                    console.log(csv_report);
+                    res=csv_report;
+                    var json_local = applyFilters(csv_report, mode,limit,reference);
+                    // console.log(json_local);
+                    // res=json_local;
+                    var csv_local = jsonToCsv(json_local);
+                    getCsv(csv_local);
+                    showMessage('success', `Your request has been processed and the download should have started!`);
+                }
+            }catch(err){
+                unblockPage();
+                showMessage('danger', err);
+            }
+        <% }%>
+
+    </script>
+</body>

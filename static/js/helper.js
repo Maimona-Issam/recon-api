@@ -9,6 +9,7 @@ if (today.getDate() < 10) {
 }
 
 var today = `${today.getFullYear()}-${month}-${day}`;
+$('#today').val(today);
 const elem = document.getElementById('rangeDate');
 const datepicker = new DateRangePicker(elem, {
   // ...options
@@ -19,11 +20,6 @@ const datepicker = new DateRangePicker(elem, {
 
 
 var mode = 'payments';
-var urls = {
-  'payments': 'https://api.checkout.com/reporting/payments/download',
-  'statement': 'https://api.checkout.com/reporting/statements/{StatementId}/payments/download',
-  'statements': 'https://api.checkout.com/reporting/statements/download',
-}
 var key = '';
 var statements = [];
 var statements_ids = [];
@@ -34,8 +30,6 @@ var selected_payout = '';
 var selected_currency = '';
 changeMode();
 
-var reports = [];
-var res = null;
 
 function unblockPage() {
     $('.loader').hide();
@@ -63,20 +57,21 @@ function unblockPage() {
     $('#alert-area').append('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' + msg + '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>');
   }
 
-  
-function changeMode() {
+function setMode() {
   resetOptions();
   mode = $('#mode').find(":selected").val();
+  changeMode();
+}
+function changeMode() {
   switch (mode) {
     case 'payments': $('#statementsOptions').hide();
       $('#paymentOptions').show();
       $('#statementId').val('');
       setStatementOptions();
-
       break;
     case 'statements': $('#statementsOptions').show();
       $('#paymentOptions').hide();
-      if (statements.length == 0) {
+      if (statements.length == 0 && key != '') {
         fetch_statement();
       }
       break;
@@ -89,9 +84,12 @@ function changeMode() {
 function checkKey() {
   if (key == '') {
     key = $('#secret').val();
+    $('#secretData').val(key);
+    secretData
   } else if (key != $('#secret').val()) {
     statements = [];
     key = $('#secret').val();
+    $('#secretData').val(key);
   }
   if (mode == 'statements' && statements.length == 0) {
     fetch_statement();
@@ -99,43 +97,15 @@ function checkKey() {
 }
 
 function fetch_statement() {
-  console.log('triggered');
-
-  if ($("input[name=secret]").val() != '') {
-
-    blockPage();
-    var temp_url = urls[mode] + "?from=2019-02-07&to=" + today;
-    showMessage('primary', `Fetching statements..`);
-
-    $.ajax({
-      url: temp_url,
-      beforeSend: function(xhr) {
-        xhr.setRequestHeader("Authorization", $("input[name=secret]").val())
-      },
-      type: 'GET',
-    //   crossOrigin: null,
-    //   crossDomain: true,
-      contentType: 'text/csv',
-      success: function (response) {
-        console.log(response);
-        statements = csvToJson(response);
-        setStatements();
-        res = response;
-        unblockPage();
-        showMessage('success', `Statements fetched successfully`);
-      },
-      error: function (response) {
-        console.log(response);
-        res = response;
-        unblockPage();
-        showMessage('danger', `${response.statusText} ${response.status}`)
-      }
-    });
-  }
+  blockPage();
+  showMessage('primary', `Fetching statements..`);
+  $('#secretForm').submit();
 }
+
 
 function csvToJson(data) {
   const lines = data.split("\r\n");
+  console.log(lines);
   /* Store the converted result into an array */
   const csvToJsonResult = [];
 
@@ -170,6 +140,13 @@ function csvToJson(data) {
     }
     /* Push the genearted JSON object to resultant array */
     csvToJsonResult.push(jsonObject)
+  }
+  if(csvToJsonResult.length==0){
+    const jsonObject = {}
+    for (let j in headers) {
+      jsonObject[headers[j]] = '';
+    }
+    csvToJsonResult.push(jsonObject);
   }
   /* Convert the final array to JSON */
   // x=csvToJsonResult;
@@ -259,6 +236,7 @@ function setStatementOptions() {
     $("#limit").prop('disabled', true).val('');
     $("#to").prop('disabled', true).val('');
     $("#from").prop('disabled', true).val('');
+    $("#breakdown").prop('disabled', true).prop('checked',false);
     var curr = statement_currencies[selected_statement];
     var payouts = statement_payouts[selected_statement];
 
@@ -281,6 +259,7 @@ function setStatementOptions() {
     $("#limit").prop('disabled', false);
     $("#to").prop('disabled', false);
     $("#from").prop('disabled', false);
+    $("#breakdown").prop('disabled', false).prop('checked',false);
   }
 }
 
@@ -295,10 +274,10 @@ function setCurrency() {
   selected_payout = '';
 }
 
-function applyFilters(csvData, type) {
+function applyFilters(csvData, type,limit,reference) {
   var data = csvToJson(csvData);
-  var limit = $('#limit').val() != '' ? parseInt($('#limit').val()) : 0;
-  var reference = $('#reference').val();
+  console.log(csvData)
+  console.log(type,limit,reference)
 
   if (type == 'payments') {
     if (limit != 0) {
@@ -324,84 +303,14 @@ function applyFilters(csvData, type) {
   return data;
 }
 
-// submit start
-$("#getRes").click(function () {
-
-  blockPage();
-  var error = '';
-
-  $(document).ready(function () {
-    // secret key check
-    if ($("input[name=secret]").val() == '') {
-      error = `Set the secret key to make a request.`;
-    }
-    else {
-      var req_url = urls[mode];
-      var from = $('#from').val();
-      var to = $('#to').val();
-      console.log(from + " " + to);
-
-
-      if (from != '' && to != '') {
-        req_url += "?from=" + from + "&to=" + to;
-        if ($('#breakdown').is(":checked")) {
-          req_url += "&include=payout_breakdown";
-        }
-        // choose which endpoint to hit based on parameters
-      } else if (mode == "statements") {
-
-        req_url = urls['statement'];
-        var statementId = $('#statementId').val();
-        var payoutId = $('#payoutId').val();
-        var currency = $('#currency').val();
-
-        if (statementId != '') {
-          req_url = req_url.replace('{StatementId}', statementId);
-
-          if (payoutId != '') {
-            req_url += "?payout_id=" + payoutId;
-          } else if (currency != '') {
-            req_url += "?payout_currency=" + currency;
-          }
-        } else {
-          //Throw error
-          error = `Choose the start and end dates to make a request. Or choose a statement ID from the list.`;
-
-        }
-      } else {
-        error = `Choose the start and end dates to make a request`;
-      }
-    }
-    if (error != '') {
-      showMessage('danger', error);
-      unblockPage();
-    } else {
-      console.log(req_url);
-      showMessage('primary', `Processing your request, this might take few minutes...`);
-      $.ajax({
-        url: req_url,
-        beforeSend: function (xhr) {
-          xhr.setRequestHeader("Authorization", $("input[name=secret]").val())
-        },
-        type: 'GET',
-        contentType: 'text/csv',
-        success: function (response) {
-          console.log(response);
-          var json_local = applyFilters(response, mode);
-          var csv_local = jsonToCsv(json_local);
-          getCsv(csv_local);
-          res = response;
-          unblockPage();
-          showMessage('success', `Your request has been processed and the download should have started!`);
-        },
-        error: function (response) {
-          unblockPage();
-          console.log(response);
-          showMessage('danger', `${response.statusText} ${response.status}`)
-        }
-      });
-    }
-  });
+$('#getRes').click(function() {
+  if(key!=''){
+    blockPage();
+    showMessage('primary', `Processing your request, this might take few minutes...`);
+    $('#dataForm').submit();
+  }else{
+    showMessage('danger',`Set the secret key to make a request.`);
+  }
 });
 
 
