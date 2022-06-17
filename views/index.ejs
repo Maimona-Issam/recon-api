@@ -182,11 +182,10 @@
                     if(typeof reference =='undefined')
                         reference='';
                     
-                    console.log(csv_report);
+                    console.log(csv_report.length);
                     res=csv_report;
                     var json_local = applyFilters(csv_report, mode,limit,reference);
-                    // console.log(json_local);
-                    // res=json_local;
+
                     var csv_local = jsonToCsv(json_local);
                     getCsv(csv_local);
                     showMessage('success', `Your request has been processed and the download should have started!`);

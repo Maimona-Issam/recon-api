@@ -14,3 +14,4 @@ app.post('/', getData);
 app.listen(PORT, () => {            //server starts listening for any attempts from a client to connect at port: {port}
     console.log(`Now listening on port ${PORT}`); 
 });
+app.timeout = 10000;

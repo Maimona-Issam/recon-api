@@ -105,7 +105,7 @@ function fetch_statement() {
 
 function csvToJson(data) {
   const lines = data.split("\r\n");
-  console.log(lines);
+
   /* Store the converted result into an array */
   const csvToJsonResult = [];
 
@@ -164,7 +164,7 @@ function jsonToCsv(data) {
   })
   csv.unshift(fields.join(',')) // add header column
   csv = csv.join('\r\n');
-  console.log(csv)
+  
   return csv;
 }
 
@@ -276,7 +276,6 @@ function setCurrency() {
 
 function applyFilters(csvData, type,limit,reference) {
   var data = csvToJson(csvData);
-  console.log(csvData)
   console.log(type,limit,reference)
 
   if (type == 'payments') {

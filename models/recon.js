@@ -28,7 +28,6 @@
 
   exports.get_report = async function(data) {
     console.log('triggered');
-    console.log(data);
 
     const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
     var urls = {
