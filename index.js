@@ -15,3 +15,5 @@ const server=app.listen(PORT, () => {            //server starts listening for a
     console.log(`Now listening on port ${PORT}`); 
 });
 server.setTimeout(1500000);
+server.keepAliveTimeout = 30 * 1500000;
+server.headersTimeout = 35 * 1500000;

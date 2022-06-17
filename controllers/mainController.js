@@ -12,6 +12,7 @@ const mainView = (req, res) => {
 //Post Request that handles Register
 const getData = async (req, res) => {
     res.setTimeout(1500000);
+    console.log(res);
     if(typeof req.body.mode != 'undefined'){
         console.log(req.body)
         const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.body;
