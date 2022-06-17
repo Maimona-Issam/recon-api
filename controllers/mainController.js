@@ -15,7 +15,7 @@ const getData = async (req, res) => {
     if(typeof req.body.mode != 'undefined'){
         console.log(req.body)
         const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.body;
-        const result= await recon.get_report({ secret, statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency})
+        const result= await recon.get_report({ secret, statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency});
         res.render("index", { 
             secret:secret,
             result:result
