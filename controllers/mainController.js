@@ -3,6 +3,7 @@ const recon = require("../models/recon");
 
 //For main Page
 const mainView = (req, res) => {
+    res.setTimeout(1500000);
     res.render("index", {
     } );
 }
@@ -10,7 +11,7 @@ const mainView = (req, res) => {
 //js
 //Post Request that handles Register
 const getData = async (req, res) => {
-
+    res.setTimeout(1500000);
     if(typeof req.body.mode != 'undefined'){
         console.log(req.body)
         const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.body;
