@@ -57,9 +57,12 @@
                     <label for="to" class="col-4 col-form-label">to</label>
                     <div class="col-8">
                         <input id="to" name="end" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.end %><% } %>">
+                        <div class="caption m-1 text-muted">Note that if the time range is too big, it might take up to 10-15 mins to process. You can try to split the range on two reports</div>
+
                     </div>
                 </div>
             </div>
+
             <div class="form-group row">
                 <label for="limit" class="col-4 col-form-label">Limit</label>
                 <div class="col-8">

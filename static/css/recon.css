@@ -21,3 +21,6 @@
       transform: rotate(360deg);
     }
   }
+  .caption{
+    font-size: small;
+  }
