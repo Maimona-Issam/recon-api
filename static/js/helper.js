@@ -188,7 +188,7 @@ function getCsv(data) {
   if (selected_currency != '' || selected_payout != '')
     name += `-${selected_currency}${selected_payout}`;
   if (name == '')
-    name = `${mode}-${$('#from').val().replaceAll('-', '')}-${$('#to').val().replaceAll('-', '')}`;
+    name = `${mode}-${$('#from').val().replace(/-/g, '')}-${$('#to').val().replace(/-/g, '')}`;
   a.setAttribute('download', `${name}.csv`);
 
   // Performing a download with click

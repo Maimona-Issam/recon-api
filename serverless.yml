@@ -1,0 +1,18 @@
+service: recon-api
+
+provider:
+ name: aws
+ runtime: nodejs14.x
+ memorySize: 1024
+ timeout: 120
+ stage: production
+ region: us-east-1
+
+functions:
+ api:
+   handler: lambda.universal
+   events:
+     - http: ANY /{proxy+}
+     - http: ANY /
+
+configValidationMode: error

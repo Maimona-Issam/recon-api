@@ -16,7 +16,9 @@
       console.log(response)
       if(response.ok){
         const txt = await response.text();
-        return {status:'s',csv:txt.replaceAll('\r\n',"CKONEWLINECKO")}
+        console.log(typeof txt);
+        console.log(txt);
+        return {status:'s',csv:txt.replace(/\r\n/g,"CKONEWLINECKO")}
       }else{
         return {status:'f',error:`${response.status} ${response.statusText}`}
       }
@@ -91,7 +93,7 @@
     
       return {
         status:'s',
-        csv:txt.replaceAll('\r\n',"CKONEWLINECKO"),
+        csv:txt.replace(/\r\n/g,"CKONEWLINECKO"),
         data_:data
       }
     }catch(err){
