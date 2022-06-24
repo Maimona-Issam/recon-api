@@ -12,7 +12,7 @@ const upload3s = async (filename,data) => {
     const s3Bucket = "tempreportsfiles";
     const objectName = filename;
     const objectData = data;
-    const objectType = "text/plain";
+    const objectType = "text/csv";
 try {
         const params = {
             Bucket: s3Bucket,
@@ -64,16 +64,16 @@ const mainView = (req, res) => {
 
 //js
 //Post Request that handles Register
-const getData = async (req, res) => {
-    res.setTimeout(1500000);
+const getData = async (req) => {
+
     var prefix='';
     if(!hostname.includes('MAC')){
         prefix='production'
     }
-    if(typeof req.body.mode != 'undefined'){
-        console.log(req.body)
-        const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.body;
-        const {status, csv, error, data_}= await recon.get_report({ secret, statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency});
+    if(typeof req.data.mode != 'undefined'){
+        console.log(req.data)
+        const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.data;
+        const {status, csv, error}= await recon.get_report({ secret, statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency});
         var result           = '';
         var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         var charactersLength = characters.length;
@@ -81,24 +81,35 @@ const getData = async (req, res) => {
           result += characters.charAt(Math.floor(Math.random() * 
             charactersLength));
        }
-        var uploadRes = await upload3s(`${result}.txt`,csv);
+        var uploadRes = await upload3s(`${result}.csv`,csv);
         console.log(uploadRes)
         var objUrl =  uploadRes.body;
         
-        res.render("index", { 
-            secret:secret,
-            result:{status,objUrl,error,data_},
-            prefix:prefix
-        } );
+        return { 
+                type:"report",
+                result:{status,objUrl,error},
+                prefix:prefix
+            }
     }else{
-        console.log(req.body)
-        const { secret, today } = req.body;
-        const result= await recon.fetch_statement(secret,today)
-        res.render("index", { 
-            secret:secret,
-            statements:result,
+        console.log(req.data)
+        const { secret, today } = req.data;
+        const {status, csv, error}= await recon.fetch_statement(secret,today)
+        var result           = '';
+        var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        var charactersLength = characters.length;
+        for ( var i = 0; i < 20; i++ ) {
+          result += characters.charAt(Math.floor(Math.random() * 
+            charactersLength));
+       }
+        var uploadRes = await upload3s(`${result}.csv`,csv);
+        console.log(uploadRes)
+        var objUrl =  uploadRes.body;
+        
+        return { 
+            type:"fetchStatements",
+            statements:{status,objUrl,error},
             prefix:prefix
-        } );
+        }
     }
 
   };

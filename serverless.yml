@@ -4,9 +4,26 @@ provider:
  name: aws
  runtime: nodejs14.x
  memorySize: 1024
- timeout: 120
+#  timeout: 900
  stage: production
  region: us-east-1
+ environment:
+  CONNECTION_DB_TABLE: ${self:resources.Resources.MessageTable.Properties.TableName}
+  # you can add statements to the Lambda function's IAM Role here
+ iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:Scan"
+      Resource:
+        - Fn::GetAtt: [MessageTable, Arn]
+    - Effect: Allow
+      Action:
+        - "execute-api:ManageConnections"
+      Resource:
+        - "arn:aws:execute-api:*:*:**/@connections/*"
 
 functions:
  api:
@@ -14,5 +31,38 @@ functions:
    events:
      - http: ANY /{proxy+}
      - http: ANY /
+ connectHandler:
+  handler: handler.connectHandler
+  events:
+    - websocket:
+        route: $connect
+ disconnectHandler:
+  handler: handler.disconnectHandler
+  events:
+    - websocket:
+        route: $disconnect
+ defaultHandler:
+  handler: handler.defaultHandler
+  events:
+    - websocket:
+        route: $default
+ getReportHandler:
+  handler: handler.getReportHandler
+  events:
+    - websocket:
+        route: getReport
 
 configValidationMode: error
+resources:
+  Resources:
+    MessageTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: "connectionId"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "connectionId"
+            KeyType: "HASH"
+        BillingMode: PAY_PER_REQUEST
+        TableName: AppConnectionTable

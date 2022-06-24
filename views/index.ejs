@@ -25,7 +25,7 @@
                 <div class="loader"></div>
                 <div class="col-8">
                     <input id="secret" name="secret" type="text" class="form-control" required="required"
-                        onchange="checkKey()" value="<% if (locals.secret) { %><%= secret %><% } %>">
+                        onchange="checkKey()" value="">
                 </div>
             </div>
             <input id="today" name="today" type="hidden" class="form-control" required="required">
@@ -33,9 +33,9 @@
         </form>
         <form id="dataForm" method="post" action="<%= prefix %>">
             <input id="secretData" name="secret" type="hidden" class="form-control" required="required"
-                value="<% if (locals.secret) { %><%= secret %><% } %>">
+                value="">
             <input id="statements" name="statements" type="hidden" class="form-control" required="required"
-            value="<% if (locals.result) { %><%= result.data_.statements %><% } %>">
+            value="">
 
             <div class="form-group row">
                 <label for="mode" class="col-4 col-form-label">Select mode</label>
@@ -50,13 +50,13 @@
                 <div class="form-group row">
                     <label for="from" class="col-4 col-form-label">From</label>
                     <div class="col-8">
-                        <input id="from" name="start" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.start %><% } %>">
+                        <input id="from" name="start" type="text" class="form-control" required="required" value="">
                     </div>
                 </div>
                 <div class="form-group row">
                     <label for="to" class="col-4 col-form-label">to</label>
                     <div class="col-8">
-                        <input id="to" name="end" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.end %><% } %>">
+                        <input id="to" name="end" type="text" class="form-control" required="required" value="">
                         <div class="caption m-1 text-muted">Note that if the time range is too big, it might take up to 10-15 mins to process. You can try to split the range on two reports</div>
 
                     </div>
@@ -66,20 +66,20 @@
             <div class="form-group row">
                 <label for="limit" class="col-4 col-form-label">Limit</label>
                 <div class="col-8">
-                    <input id="limit" name="limit" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.limit %><% } %>">
+                    <input id="limit" name="limit" type="text" class="form-control" required="required" value="">
                 </div>
             </div>
             <div class="form-group row">
                 <label for="breakdown" class="col-4 col-form-label">Include payout breakdown</label>
                 <div class="col-8">
-                    <input id="breakdown" name="breakdown" type="checkbox" class="form-control" required="required" <% if (locals.result) { %><%= typeof result.data_.breakdown != 'undefined' ? "checked": '' %><% } %>>
+                    <input id="breakdown" name="breakdown" type="checkbox" class="form-control" required="required">
                 </div>
             </div>
             <div id="paymentOptions">
                 <div class="form-group row">
                     <label for="reference" class="col-4 col-form-label">Reference</label>
                     <div class="col-8">
-                        <input id="reference" name="reference" type="text" class="form-control" required="required" value="<% if (locals.result) { %><%= result.data_.reference %><% } %>">
+                        <input id="reference" name="reference" type="text" class="form-control" required="required" value="">
                     </div>
                 </div>
             </div>
@@ -126,93 +126,93 @@
     <script src="<%= prefix %>/js/bootstrap.min.js"></script>
     <script src="<%= prefix %>/js/helper.js"></script>
     <script>
-        <% if (locals.secret) { %>key='<%= secret %>';<% } %>
+        let socket = new WebSocket("wss://6hhgusqi85.execute-api.us-east-1.amazonaws.com/production");
+        var x='';
+        socket.onopen = function(e) {
+            console.log("[open] Connection established");
+            console.log("Sending to server");
+        };
 
-        <% if (locals.statements) { %>
-            var status= '<%= statements.status %>';
-            if(status =='f'){
-                showMessage('danger', '<%= statements.error %>');
-            }else{
-                const stat_csv = "<%= statements.csv %>".replace(/CKONEWLINECKO/g, '\r\n');
-                if (stat_csv) {
-                    statements = csvToJson(stat_csv);
-                    $('#statements').val(JSON.stringify(statements));
-                    setStatements();
-                    showMessage('success', `Statements fetched successfully`);
-                    $('#mode').val('statements');
-                    mode=$('#mode').val();
-                    changeMode();
-                }
-            }
-        <% } %>
+        socket.onmessage = function(event) {
+            console.log(`[message] Data received from server: ${event.data}`);
+            x=event.data;
+            processResponse(JSON.parse(event.data));
+        };
 
-        <% if (locals.result) { %>
+        socket.onclose = function(event) {
+        if (event.wasClean) {
+            console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        } else {
+            // e.g. server process killed or network down
+            // event.code is usually 1006 in this case
+            console.log('[close] Connection died');
+        }
+        };
 
-            try{
-                if($('#statements').val()!=''){
-                    statements = JSON.parse($('#statements').val());
-                    setStatements();
-                }
-                mode = '<%= result.data_.mode %>';
-                $('#mode').val(mode);
-                console.log(mode);
-                changeMode();
+        socket.onerror = function(error) {
+            console.log(`[error] ${error.message}`);
+            unblockPage();
+            showMessage('danger', error.message);
+        };
 
-                $('#statementId').val('<%= result.data_.statementId %>');
-                if($('#statementId').val()!=''){
-                    setStatementOptions();
-                    $('#currency').val('<%= result.data_.currency %>');
-                    $('#payoutId').val('<%= result.data_.payoutId %>');
-                    if($('#currency').val()!=''){
-                        setCurrency();
-                    }else if($('#payoutId').val()!=''){
-                        setPayoutId();
-                    }
-                }
 
-                var status= '<%= result.status %>';
-                if(status =='f'){
-                    showMessage('danger', '<%= result.error %>');
-                }else{
-                    var report_url="<%= result.objUrl %>";
-                    var csv_report= '';
-                    var request = new XMLHttpRequest();
-                    request.open('GET', report_url, true);
-                    request.send(null);
-                    request.onreadystatechange = function () {
-                        if (request.readyState === 4 && request.status === 200) {
-                            var type = request.getResponseHeader('Content-Type');
-                            console.log(type);
-                            if (type.indexOf("text") !== 1) {
-                                console.log(request.responseText);
-                                csv_report= request.responseText;
-                                csv_report=csv_report.replace(/CKONEWLINECKO/g, '\r\n');
-
-                                var limit = "<%= result.data_.limit %>";
-                                if(typeof limit !='undefined')
-                                    limit = $('#limit').val() != '' ? parseInt($('#limit').val()) : 0;
-                                else limit =0;
-
-                                var reference="<%= result.data_.reference %>";
-                                if(typeof reference =='undefined')
-                                    reference='';
-                                
-                                console.log(csv_report.length);
-                                res=csv_report;
-                                var json_local = applyFilters(csv_report, mode,limit,reference);
-
-                                var csv_local = jsonToCsv(json_local);
-                                getCsv(csv_local);
-                                showMessage('success', `Your request has been processed and the download should have started!`);
+        function processResponse(event){
+            console.log(event.type);
+            switch(event.type){
+                case "fetchStatements":
+                    var status= event.statements.status;
+                    if(status =='f'){
+                        showMessage('danger', event.statements.error);
+                    }else{
+                        const stat_csv = event.statements.csv.replace(/CKONEWLINECKO/g, '\r\n');
+                        if (stat_csv) {
+                            statements = csvToJson(stat_csv,true);
+                            $('#statements').val(JSON.stringify(statements));
+                            setStatements();
+                            unblockPage();
+                            showMessage('success', `Statements fetched successfully`);
                         }
                     }
-                }
-                }
-            }catch(err){
-                unblockPage();
-                showMessage('danger', err);
+                    break;
+                case "report":
+                    var status= event.result.status;
+                    if(status =='f'){
+                        showMessage('danger', event.result.error);
+                    }else{
+                        var report_url=event.result.objUrl;
+                        var csv_report= '';
+                        showMessage('primary', `Getting your file ready...`);
+                        blockPage();
+                        var request = new XMLHttpRequest();
+                        request.open('GET', report_url, true);
+                        request.send(null);
+                        request.onreadystatechange = function () {
+                            if (request.readyState === 4 && request.status === 200) {
+                                var type = request.getResponseHeader('Content-Type');
+                                console.log(type);
+                                if (type.indexOf("text") !== 1) {
+                                    console.log(request.responseText);
+                                    csv_report= request.responseText;
+
+                                    limit = limit != '' ? parseInt(limit) : 0;
+                                    if(typeof reference =='undefined')
+                                        reference='';
+                                    
+                                    console.log(csv_report.length);
+                                    res=csv_report;
+                                    var json_local = applyFilters(csv_report, mode,limit,reference);
+
+                                    var csv_local = jsonToCsv(json_local);
+                                    getCsv(csv_local);
+                                    showMessage('success', `Your request has been processed and the download should have started!`);
+                                    unblockPage();
+                            }
+                        }
+                    }
+                    }
+                    break;
             }
-        <% }%>
+        }
 
     </script>
 </body>

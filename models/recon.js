@@ -16,9 +16,9 @@
       console.log(response)
       if(response.ok){
         const txt = await response.text();
-        console.log(typeof txt);
-        console.log(txt);
-        return {status:'s',csv:txt.replace(/\r\n/g,"CKONEWLINECKO")}
+        // console.log(typeof txt);
+        // console.log(txt);
+        return {status:'s',csv:txt}
       }else{
         return {status:'f',error:`${response.status} ${response.statusText}`}
       }
@@ -77,7 +77,6 @@
       return{
         status:'f',
         error:err,
-        data_:data
       }
     } else {
       try{
@@ -93,14 +92,12 @@
     
       return {
         status:'s',
-        csv:txt.replace(/\r\n/g,"CKONEWLINECKO"),
-        data_:data
+        csv:txt,
       }
     }catch(err){
       return {
         status:'f',
         error:err,
-        data_:data
       }
     }
     }

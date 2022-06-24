@@ -20,6 +20,8 @@ const datepicker = new DateRangePicker(elem, {
 
 
 var mode = 'payments';
+var limit='0';
+var reference='';
 var key = '';
 var statements = [];
 var statements_ids = [];
@@ -99,11 +101,12 @@ function checkKey() {
 function fetch_statement() {
   blockPage();
   showMessage('primary', `Fetching statements..`);
-  $('#secretForm').submit();
+  var req={ "action": "getReport", "data": {"secret":key,"today":today} };
+  socket.send(JSON.stringify(req));
 }
 
 
-function csvToJson(data) {
+function csvToJson(data,is_local) {
   const lines = data.split("\r\n");
 
   /* Store the converted result into an array */
@@ -126,7 +129,8 @@ function csvToJson(data) {
         quoteFlag = 1
       }
       else if (character === '"' && quoteFlag == 1) quoteFlag = 0
-      if (character === ',' && quoteFlag === 0) character = '|'
+      if (character === ',' && quoteFlag === 0) {character = '|';}
+      else if(character === ',' && !is_local) character=';';
       if (character !== '"') string += character
     }
     let jsonProperties = string.split("|");
@@ -149,7 +153,6 @@ function csvToJson(data) {
     csvToJsonResult.push(jsonObject);
   }
   /* Convert the final array to JSON */
-  // x=csvToJsonResult;
   return csvToJsonResult;
 }
 
@@ -275,7 +278,7 @@ function setCurrency() {
 }
 
 function applyFilters(csvData, type,limit,reference) {
-  var data = csvToJson(csvData);
+  var data = csvToJson(csvData,false);
   console.log(type,limit,reference)
 
   if (type == 'payments') {
@@ -306,7 +309,10 @@ $('#getRes').click(function() {
   if(key!=''){
     blockPage();
     showMessage('primary', `Processing your request, this might take few minutes...`);
-    $('#dataForm').submit();
+    limit=$('#limit').val();
+    reference=$('#reference').val();
+    var req={ "action": "getReport", "data": {"secret":key,"statements":statements,"mode":mode,"start":$('#from').val(),'end':$('#to').val(),"limit":limit, "breakdown":$('#breakdown').val(), "reference":reference, "statementId":$('#statementId').val(), "payoutId":$('#payoutId').val(), "currency":$('#currency').val()} };
+    socket.send(JSON.stringify(req));
   }else{
     showMessage('danger',`Set the secret key to make a request.`);
   }
