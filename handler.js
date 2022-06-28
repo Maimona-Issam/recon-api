@@ -13,53 +13,63 @@ const failedResponse = (statusCode, error) => ({
   statusCode,
   body: error
 })
+module.exports.handleRequests= async (event, context, callback)=>{
 
-module.exports.connectHandler = (event, context, callback) => {
-  addConnection(event.requestContext.connectionId)
-    .then(() => {
-      callback(null, successfullResponse)
-    })
-    .catch((err) => {
-        console.log(err);
-        console.log(JSON.stringify(err));
-      callback(failedResponse(500, JSON.stringify(err)))
-    })
+    switch (event.requestContext.routeKey) {
+        case '$connect':
+            await addConnection(event.requestContext.connectionId);
+            break;
+        case '$disconnect':
+            await deleteConnection(event.requestContext.connectionId);
+            break;
+        case 'getReport':
+            const lambda = new AWS.Lambda();
+            await lambda.invoke({
+                FunctionName: process.env.WEBSOCKET_REPORT_GENERATION_LAMBDA_NAME,
+                InvocationType: 'Event',
+                Payload: JSON.stringify(event),
+            }).promise();
+            break;
+        case 'heartbeat':
+            heartbeat(event);
+            console.log('heartbeat ok')
+            break;
+        case '$default':
+        default:
+            callback(null, failedResponse(404, 'No event found'));
+    }
+    callback(null, successfullResponse);
 }
+const heartbeat = (event) => {
+    console.log(event);
+    var requestContext=event.requestContext;
+    const connectionId = requestContext.connectionId;
+        try {
+            const endpoint =
+                event.requestContext.domainName + '/' + event.requestContext.stage
+            const apigwManagementApi = new AWS.ApiGatewayManagementApi({
+                apiVersion: '2018-11-29',
+                endpoint: endpoint
+            })
+    
+            const params = {
+                ConnectionId: connectionId,
+                Data: JSON.stringify({"type":"heartbeat"})
+            }
+            return apigwManagementApi.postToConnection(params).promise()
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    };
 
-module.exports.disconnectHandler = (event, context, callback) => {
-  deleteConnection(event.requestContext.connectionId)
-    .then(() => {
-      callback(null, successfullResponse)
-    })
-    .catch((err) => {
-        console.log(err);
-        console.log(JSON.stringify(err));
-      callback(failedResponse(500, JSON.stringify(err)))
-    })
-}
+module.exports.generate = async (event, context, callback) =>{
 
-module.exports.defaultHandler = (event, context, callback) => {
-  callback(null, failedResponse(404, 'No event found'))
-}
-
-module.exports.getReportHandler = (event, context, callback) => {
-     send(event)
-    .then(() => {
-      callback(null, successfullResponse)
-    })
-    .catch((err) => {
-        console.log(err);
-        console.log(JSON.stringify(err));
-      callback(failedResponse(500, JSON.stringify(err)))
-    })
-}
-
-
-const send = (event) => {
   console.log(event);
   var requestContext=event.requestContext;
   const connectionId = requestContext.connectionId;
-  return getData(JSON.parse(event.body)).then((postData)=>{
+  
+  var postData= await getData(JSON.parse(event.body));
 
     if (typeof postData === 'object') {
         console.log('It was an object')
@@ -79,12 +89,12 @@ const send = (event) => {
             ConnectionId: connectionId,
             Data: postData
         }
-        return apigwManagementApi.postToConnection(params).promise()
+        await apigwManagementApi.postToConnection(params).promise();
     } catch (error) {
         console.log(error)
         throw error;
     }
-});
+    callback(null, successfullResponse);
 }
 
 const addConnection = (connectionId) => {

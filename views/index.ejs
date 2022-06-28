@@ -24,7 +24,7 @@
                 <label for="secret" class="col-4 col-form-label">Secret Key</label>
                 <div class="loader"></div>
                 <div class="col-8">
-                    <input id="secret" name="secret" type="text" class="form-control" required="required"
+                    <input id="secret" name="secret" type="password" class="form-control" required="required"
                         onchange="checkKey()" value="">
                 </div>
             </div>
@@ -125,94 +125,4 @@
     <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.2.0/dist/js/datepicker-full.min.js"></script>
     <script src="<%= prefix %>/js/bootstrap.min.js"></script>
     <script src="<%= prefix %>/js/helper.js"></script>
-    <script>
-        let socket = new WebSocket("wss://6hhgusqi85.execute-api.us-east-1.amazonaws.com/production");
-        var x='';
-        socket.onopen = function(e) {
-            console.log("[open] Connection established");
-            console.log("Sending to server");
-        };
-
-        socket.onmessage = function(event) {
-            console.log(`[message] Data received from server: ${event.data}`);
-            x=event.data;
-            processResponse(JSON.parse(event.data));
-        };
-
-        socket.onclose = function(event) {
-        if (event.wasClean) {
-            console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-        } else {
-            // e.g. server process killed or network down
-            // event.code is usually 1006 in this case
-            console.log('[close] Connection died');
-        }
-        };
-
-        socket.onerror = function(error) {
-            console.log(`[error] ${error.message}`);
-            unblockPage();
-            showMessage('danger', error.message);
-        };
-
-
-        function processResponse(event){
-            console.log(event.type);
-            switch(event.type){
-                case "fetchStatements":
-                    var status= event.statements.status;
-                    if(status =='f'){
-                        showMessage('danger', event.statements.error);
-                    }else{
-                        const stat_csv = event.statements.csv.replace(/CKONEWLINECKO/g, '\r\n');
-                        if (stat_csv) {
-                            statements = csvToJson(stat_csv,true);
-                            $('#statements').val(JSON.stringify(statements));
-                            setStatements();
-                            unblockPage();
-                            showMessage('success', `Statements fetched successfully`);
-                        }
-                    }
-                    break;
-                case "report":
-                    var status= event.result.status;
-                    if(status =='f'){
-                        showMessage('danger', event.result.error);
-                    }else{
-                        var report_url=event.result.objUrl;
-                        var csv_report= '';
-                        showMessage('primary', `Getting your file ready...`);
-                        blockPage();
-                        var request = new XMLHttpRequest();
-                        request.open('GET', report_url, true);
-                        request.send(null);
-                        request.onreadystatechange = function () {
-                            if (request.readyState === 4 && request.status === 200) {
-                                var type = request.getResponseHeader('Content-Type');
-                                console.log(type);
-                                if (type.indexOf("text") !== 1) {
-                                    console.log(request.responseText);
-                                    csv_report= request.responseText;
-
-                                    limit = limit != '' ? parseInt(limit) : 0;
-                                    if(typeof reference =='undefined')
-                                        reference='';
-                                    
-                                    console.log(csv_report.length);
-                                    res=csv_report;
-                                    var json_local = applyFilters(csv_report, mode,limit,reference);
-
-                                    var csv_local = jsonToCsv(json_local);
-                                    getCsv(csv_local);
-                                    showMessage('success', `Your request has been processed and the download should have started!`);
-                                    unblockPage();
-                            }
-                        }
-                    }
-                    }
-                    break;
-            }
-        }
-
-    </script>
 </body>

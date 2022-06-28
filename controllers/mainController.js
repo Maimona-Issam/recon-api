@@ -72,8 +72,8 @@ const getData = async (req) => {
     }
     if(typeof req.data.mode != 'undefined'){
         console.log(req.data)
-        const { secret,statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.data;
-        const {status, csv, error}= await recon.get_report({ secret, statements, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency});
+        const { secret, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency} = req.data;
+        const {status, csv, error}= await recon.get_report({ secret, mode, start, end, limit, breakdown, reference, statementId, payoutId, currency});
         var result           = '';
         var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         var charactersLength = characters.length;

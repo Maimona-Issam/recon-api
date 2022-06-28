@@ -31,6 +31,128 @@ var selected_statement = '';
 var selected_payout = '';
 var selected_currency = '';
 changeMode();
+let socket = new WebSocket("wss://6hhgusqi85.execute-api.us-east-1.amazonaws.com/production");
+var x='';
+var lastActivity;
+socket.onopen = function(e) {
+    console.log("[open] Connection established");
+    console.log(new Date());
+    lastActivity=new Date().getTime();
+    keepAliveSocket();
+};
+
+socket.onmessage = function(event) {
+    console.log(`[message] Data received from server: ${event.data}`);
+    x=event.data;
+    lastActivity=new Date().getTime();
+    // keepAliveSocket();
+    processResponse(JSON.parse(event.data));
+};
+
+socket.onclose = function(event) {
+    console.log(new Date());
+    lastActivity=new Date().getTime();
+    if (event.wasClean) {
+        console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+    } else {
+        // e.g. server process killed or network down
+        // event.code is usually 1006 in this case
+        console.log('[close] Connection died');
+    }
+    showMessage('danger', `Your connection was disconnected, refresh the page and try again.`);
+    unblockPage();
+};
+
+socket.onerror = function(error) {
+    console.log(`[error] ${error.message}`);
+    lastActivity=new Date().getTime();
+    unblockPage();
+    showMessage('danger', error.message);
+};
+
+function keepAliveSocket(){
+  setTimeout(()=>{
+    if(lastActivity && lastActivity-(new Date().getTime()) < 60000){
+      var req={ "action": "heartbeat", "data": {} };
+      socket.send(JSON.stringify(req));
+    }else{
+      keepAliveSocket();
+    }
+  }, 540000);
+}
+
+function processResponse(event){
+    console.log(event.type);
+    switch(event.type){
+        case "heartbeat":
+            lastActivity=new Date().getTime();
+            keepAliveSocket();
+          break;
+        case "fetchStatements":
+            var status= event.statements.status;
+            if(status =='f'){
+                showMessage('danger', event.statements.error);
+            }else{
+                var report_url=event.statements.objUrl;
+                var csv_report= '';
+                var request = new XMLHttpRequest();
+                request.open('GET', report_url, true);
+                request.send(null);
+                request.onreadystatechange = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        var type = request.getResponseHeader('Content-Type');
+                        console.log(type);
+                        if (type.indexOf("text") !== 1) {
+                            console.log(request.responseText);
+                            csv_report= request.responseText;
+                            statements = csvToJson(csv_report,false);
+                            setStatements();
+                            showMessage('success', `Statements fetched successfully`);
+                            unblockPage();
+                        }
+                    }
+                }
+            }
+            break;
+        case "report":
+            var status= event.result.status;
+            if(status =='f'){
+                showMessage('danger', event.result.error);
+            }else{
+                var report_url=event.result.objUrl;
+                var csv_report= '';
+                showMessage('primary', `Getting your file ready...`);
+                blockPage();
+                var request = new XMLHttpRequest();
+                request.open('GET', report_url, true);
+                request.send(null);
+                request.onreadystatechange = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        var type = request.getResponseHeader('Content-Type');
+                        console.log(type);
+                        if (type.indexOf("text") !== 1) {
+                            console.log(request.responseText);
+                            csv_report= request.responseText;
+
+                            limit = limit != '' ? parseInt(limit) : 0;
+                            if(typeof reference =='undefined')
+                                reference='';
+                            
+                            console.log(csv_report.length);
+                            res=csv_report;
+                            var json_local = applyFilters(csv_report, mode,limit,reference);
+
+                            var csv_local = jsonToCsv(json_local);
+                            getCsv(csv_local);
+                            showMessage('success', `Your request has been processed and the download should have started!`);
+                            unblockPage();
+                    }
+                }
+            }
+            }
+            break;
+    }
+}
 
 
 function unblockPage() {
@@ -311,7 +433,7 @@ $('#getRes').click(function() {
     showMessage('primary', `Processing your request, this might take few minutes...`);
     limit=$('#limit').val();
     reference=$('#reference').val();
-    var req={ "action": "getReport", "data": {"secret":key,"statements":statements,"mode":mode,"start":$('#from').val(),'end':$('#to').val(),"limit":limit, "breakdown":$('#breakdown').val(), "reference":reference, "statementId":$('#statementId').val(), "payoutId":$('#payoutId').val(), "currency":$('#currency').val()} };
+    var req={ "action": "getReport", "data": {"secret":key,"mode":mode,"start":$('#from').val(),'end':$('#to').val(),"limit":limit, "breakdown":$('#breakdown').val(), "reference":reference, "statementId":$('#statementId').val(), "payoutId":$('#payoutId').val(), "currency":$('#currency').val()} };
     socket.send(JSON.stringify(req));
   }else{
     showMessage('danger',`Set the secret key to make a request.`);
