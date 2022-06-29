@@ -46,7 +46,7 @@
 
     if (typeof from != 'undefined' && typeof to != 'undefined' && from != '' && to != '') {
       req_url += "?from=" + from + "&to=" + to;
-      if (typeof data.breakdown != 'undefined') {
+      if (typeof data.breakdown != 'undefined' && data.breakdown) {
         req_url += "&include=payout_breakdown";
       }
       // choose which endpoint to hit based on parameters

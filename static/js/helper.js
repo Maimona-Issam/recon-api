@@ -22,9 +22,13 @@ const datepicker = new DateRangePicker(elem, {
 var mode = 'payments';
 var limit='0';
 var reference='';
+var to ='';
+var from ='';
+var breakdown ='';
 var key = '';
-var statements = [];
-var statements_ids = [];
+var statements = {};
+var reports = {};
+var statements_ids = {};
 var statement_currencies = {};
 var statement_payouts = {};
 var selected_statement = '';
@@ -32,7 +36,7 @@ var selected_payout = '';
 var selected_currency = '';
 changeMode();
 let socket = new WebSocket("wss://6hhgusqi85.execute-api.us-east-1.amazonaws.com/production");
-var x='';
+
 var lastActivity;
 socket.onopen = function(e) {
     console.log("[open] Connection established");
@@ -43,9 +47,7 @@ socket.onopen = function(e) {
 
 socket.onmessage = function(event) {
     console.log(`[message] Data received from server: ${event.data}`);
-    x=event.data;
     lastActivity=new Date().getTime();
-    // keepAliveSocket();
     processResponse(JSON.parse(event.data));
 };
 
@@ -95,22 +97,27 @@ function processResponse(event){
             }else{
                 var report_url=event.statements.objUrl;
                 var csv_report= '';
-                var request = new XMLHttpRequest();
-                request.open('GET', report_url, true);
-                request.send(null);
-                request.onreadystatechange = function () {
-                    if (request.readyState === 4 && request.status === 200) {
-                        var type = request.getResponseHeader('Content-Type');
-                        console.log(type);
-                        if (type.indexOf("text") !== 1) {
-                            console.log(request.responseText);
-                            csv_report= request.responseText;
-                            statements = csvToJson(csv_report,false);
-                            setStatements();
-                            showMessage('success', `Statements fetched successfully`);
-                            unblockPage();
-                        }
-                    }
+                try{
+                  var request = new XMLHttpRequest();
+                  request.open('GET', report_url, true);
+                  request.send(null);
+                  request.onreadystatechange = function () {
+                      if (request.readyState === 4 && request.status === 200) {
+                          var type = request.getResponseHeader('Content-Type');
+                          console.log(type);
+                          if (type.indexOf("text") !== 1) {
+                              console.log(request.responseText);
+                              csv_report= request.responseText;
+                              statements[key] = csvToJson(csv_report,false);
+                              setStatements();
+                              showMessage('success', `Statements fetched successfully`);
+                              unblockPage();
+                          }
+                      }
+                  }
+                }catch(err){
+                  showMessage('danger', err);
+                  unblockPage();
                 }
             }
             break;
@@ -123,38 +130,51 @@ function processResponse(event){
                 var csv_report= '';
                 showMessage('primary', `Getting your file ready...`);
                 blockPage();
-                var request = new XMLHttpRequest();
-                request.open('GET', report_url, true);
-                request.send(null);
-                request.onreadystatechange = function () {
-                    if (request.readyState === 4 && request.status === 200) {
-                        var type = request.getResponseHeader('Content-Type');
-                        console.log(type);
-                        if (type.indexOf("text") !== 1) {
-                            console.log(request.responseText);
-                            csv_report= request.responseText;
+                try{
+                  var request = new XMLHttpRequest();
+                  request.open('GET', report_url, true);
+                  request.send(null);
+                  request.onreadystatechange = function () {
+                      if (request.readyState === 4 && request.status === 200) {
+                          var type = request.getResponseHeader('Content-Type');
+                          console.log(type);
+                          if (type.indexOf("text") !== 1) {
+                              console.log(request.responseText);
+                              csv_report= request.responseText;
 
-                            limit = limit != '' ? parseInt(limit) : 0;
-                            if(typeof reference =='undefined')
-                                reference='';
-                            
-                            console.log(csv_report.length);
-                            res=csv_report;
-                            var json_local = applyFilters(csv_report, mode,limit,reference);
+                              limit = limit != '' ? parseInt(limit) : 0;
+                              if(typeof reference =='undefined')
+                                  reference='';
+                              
+                              console.log(csv_report.length);
+                              res=csv_report;
 
-                            var csv_local = jsonToCsv(json_local);
-                            getCsv(csv_local);
-                            showMessage('success', `Your request has been processed and the download should have started!`);
-                            unblockPage();
-                    }
+                              var json_report = csvToJson(csv_report,false);
+                              if(mode=='payments')
+                                reports[key][`${mode}-${from}-${to}`]=json_report;
+                              else
+                                reports[key][`${mode}-${from}-${to}-${breakdown}-${selected_statement}-${selected_currency}-${selected_payout}`]=json_report;
+
+                              getFinalCsv(json_report);
+                            }
+                         }
+                    }                
+                }catch(err){
+                  showMessage('danger', err);
+                  unblockPage();
                 }
-            }
             }
             break;
     }
 }
 
-
+function getFinalCsv(json_report){
+  var json_local = applyFilters(json_report, mode,limit,reference);
+  var csv_local = jsonToCsv(json_local);
+  getCsv(csv_local);
+  showMessage('success', `Your request has been processed and the download should have started!`);
+  unblockPage();
+}
 function unblockPage() {
     $('.loader').hide();
     $("#getRes").prop("disabled", false);
@@ -195,7 +215,7 @@ function changeMode() {
       break;
     case 'statements': $('#statementsOptions').show();
       $('#paymentOptions').hide();
-      if (statements.length == 0 && key != '') {
+      if (statements[key].length == 0 && key != '') {
         fetch_statement();
       }
       break;
@@ -208,14 +228,23 @@ function changeMode() {
 function checkKey() {
   if (key == '') {
     key = $('#secret').val();
+    statements[key] = [];
     $('#secretData').val(key);
-    secretData
+    reports[key]={};
+
   } else if (key != $('#secret').val()) {
-    statements = [];
-    key = $('#secret').val();
-    $('#secretData').val(key);
+      key = $('#secret').val();
+      $('#secretData').val(key);
+      
+      if(typeof statements[key] != 'undefined' && statements[key].length!=0)
+        setStatements()
+      else{
+        statements[key] = [];
+        reports[key]={};
+      }
   }
-  if (mode == 'statements' && statements.length == 0) {
+
+  if (mode == 'statements' && statements[key].length == 0) {
     fetch_statement();
   }
 }
@@ -321,18 +350,38 @@ function getCsv(data) {
 }
 
 function setStatements() {
-  for (var i = 0; i < statements.length; i++) {
-    if (statements_ids.includes(statements[i]['Statement ID'])) {
-      statement_currencies[statements[i]['Statement ID']].push(statements[i]['Currency']);
-      statement_payouts[statements[i]['Statement ID']].push(statements[i]['Payout Id']);
+  $("#statementId").empty();
+  $("#statementId").append($('<option>', {
+    value: '',
+    text: 'Select..'
+  }));
+  var tempstate=statements[key];
+
+  var empty=false;
+  if(typeof statements_ids[key] == 'undefined' || statements_ids[key].length==0){
+    empty=true;
+    statements_ids[key]=[];
+    statement_currencies[key]={};
+    statement_payouts[key]={};
+  }
+  var tempstateid=[];
+  for (var i = 0; i < tempstate.length; i++) {
+    if (tempstateid.includes(tempstate[i]['Statement ID'])) {
+      if(empty){
+        statement_currencies[key][tempstate[i]['Statement ID']].push(tempstate[i]['Currency']);
+        statement_payouts[key][tempstate[i]['Statement ID']].push(tempstate[i]['Payout Id']);
+      }
     }
     else {
-      statements_ids.push(statements[i]['Statement ID']);
-      statement_currencies[statements[i]['Statement ID']] = [statements[i]['Currency']];
-      statement_payouts[statements[i]['Statement ID']] = [statements[i]['Payout Id']];
+      if(empty){
+        statements_ids[key].push(tempstate[i]['Statement ID']);
+        statement_currencies[key][tempstate[i]['Statement ID']] = [tempstate[i]['Currency']];
+        statement_payouts[key][tempstate[i]['Statement ID']] = [tempstate[i]['Payout Id']];
+      }
+      tempstateid.push(tempstate[i]['Statement ID']);
       $("#statementId").append($('<option>', {
-        value: statements[i]['Statement ID'],
-        text: statements[i]['Statement ID'] + ': ' + statements[i]['Payout Start Date'].substring(0, 10) + " - " + statements[i]['Payout End Date'].substring(0, 10)
+        value: tempstate[i]['Statement ID'],
+        text: tempstate[i]['Statement ID'] + ': ' + tempstate[i]['Payout Start Date'].substring(0, 10) + " - " + tempstate[i]['Payout End Date'].substring(0, 10)
       }));
     }
   }
@@ -362,8 +411,8 @@ function setStatementOptions() {
     $("#to").prop('disabled', true).val('');
     $("#from").prop('disabled', true).val('');
     $("#breakdown").prop('disabled', true).prop('checked',false);
-    var curr = statement_currencies[selected_statement];
-    var payouts = statement_payouts[selected_statement];
+    var curr = statement_currencies[key][selected_statement];
+    var payouts = statement_payouts[key][selected_statement];
 
     for (var i = 0; i < curr.length; i++) {
       $("#currency").append($('<option>', {
@@ -399,8 +448,7 @@ function setCurrency() {
   selected_payout = '';
 }
 
-function applyFilters(csvData, type,limit,reference) {
-  var data = csvToJson(csvData,false);
+function applyFilters(data, type,limit,reference) {
   console.log(type,limit,reference)
 
   if (type == 'payments') {
@@ -433,8 +481,22 @@ $('#getRes').click(function() {
     showMessage('primary', `Processing your request, this might take few minutes...`);
     limit=$('#limit').val();
     reference=$('#reference').val();
-    var req={ "action": "getReport", "data": {"secret":key,"mode":mode,"start":$('#from').val(),'end':$('#to').val(),"limit":limit, "breakdown":$('#breakdown').val(), "reference":reference, "statementId":$('#statementId').val(), "payoutId":$('#payoutId').val(), "currency":$('#currency').val()} };
-    socket.send(JSON.stringify(req));
+    from=$('#from').val();
+    to=$('#to').val();
+    breakdown=$('#breakdown').prop('checked');
+    
+    var tempname='';
+    if(mode=='payments')
+      tempname=`${mode}-${from}-${to}`;
+    else
+      tempname=`${mode}-${from}-${to}-${breakdown}-${selected_statement}-${selected_currency}-${selected_payout}`;
+
+    if(typeof reports[key][tempname] != 'undefined' && reports[key][tempname].length !=0)
+      getFinalCsv(reports[key][tempname]);
+    else{
+      var req={ "action": "getReport", "data": {"secret":key,"mode":mode,"start":from,'end':to,"limit":limit, "breakdown":breakdown, "reference":reference, "statementId":selected_statement, "payoutId":selected_payout, "currency":selected_currency} };
+      socket.send(JSON.stringify(req));
+    }
   }else{
     showMessage('danger',`Set the secret key to make a request.`);
   }
