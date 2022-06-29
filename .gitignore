@@ -13,3 +13,5 @@ docker-compose.yml
 .serverless
 .serverless/*
 AWSCLIV2.pkg
+*.yml
+.vscode
