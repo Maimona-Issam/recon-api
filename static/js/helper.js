@@ -94,6 +94,7 @@ function processResponse(event){
             var status= event.statements.status;
             if(status =='f'){
                 showMessage('danger', event.statements.error);
+                unblockPage();
             }else{
                 var report_url=event.statements.objUrl;
                 var csv_report= '';
@@ -125,6 +126,7 @@ function processResponse(event){
             var status= event.result.status;
             if(status =='f'){
                 showMessage('danger', event.result.error);
+                unblockPage();
             }else{
                 var report_url=event.result.objUrl;
                 var csv_report= '';

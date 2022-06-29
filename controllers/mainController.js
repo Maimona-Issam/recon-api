@@ -6,8 +6,8 @@ const AWS = require('aws-sdk');
 
 const upload3s = async (filename,data) => {
     const s3 = new AWS.S3({
-        accessKeyId: "AKIAQQ2OUQ72VDR74ESE",
-        secretAccessKey: "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"
+        accessKeyId: process.env.ACCESS_KEY_ID,
+        secretAccessKey: process.env.SECRET_ACCESS_KEY
       });
     const s3Bucket = "tempreportsfiles";
     const objectName = filename;

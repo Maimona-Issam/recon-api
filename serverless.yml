@@ -13,6 +13,8 @@ provider:
  environment:
   CONNECTION_DB_TABLE: ${self:resources.Resources.MessageTable.Properties.TableName}
   WEBSOCKET_REPORT_GENERATION_LAMBDA_NAME: recon-api-${self:provider.stage}-websocket-generate-report
+  ACCESS_KEY_ID:  "AKIAQQ2OUQ726PGPU6UW"
+  SECRET_ACCESS_KEY: "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"
   # you can add statements to the Lambda function's IAM Role here
  iamRoleStatements:
     - Effect: Allow
